@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maqam Matcher</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f5f3ee;
+  --surface: #ffffff;
+  --primary: #2c3e50;
+  --accent: #b8860b;
+  --accent-light: #f0e6d0;
+  --selected: #27ae60;
+  --selected-bg: #d4edda;
+  --text: #2d3436;
+  --muted: #95a5a6;
+  --radius: 10px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+#app { max-width: 800px; margin: 0 auto; padding: 24px 16px 48px; }
+header {
+  text-align: center;
+  padding: 32px 16px 24px;
+}
+header h1 {
+  font-size: 28px;
+  color: var(--primary);
+  margin-bottom: 6px;
+}
+header h1 span { color: var(--accent); }
+header p { color: var(--muted); font-size: 15px; }
+
+.section-title {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+#controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+#root-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#root-filter label { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; }
+#root-filter select {
+  padding: 6px 12px;
+  border: 1.5px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+#selection-area {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 200px;
+}
+#selection-text { font-size: 14px; color: var(--muted); }
+#selection-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.selection-note {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--selected-bg);
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e7e34;
+}
+#clear-btn {
+  padding: 6px 16px;
+  border: 1.5px solid #e74c3c;
+  border-radius: 6px;
+  background: white;
+  color: #e74c3c;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.15s;
+  white-space: nowrap;
+}
+#clear-btn:hover { background: #fdf0ef; }
+.hidden { display: none !important; }
+
+#note-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  padding: 20px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 24px;
+}
+.note-btn {
+  width: 60px;
+  height: 60px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  position: relative;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.note-btn:hover { border-color: var(--accent); }
+.note-btn.selected {
+  border-color: var(--selected);
+  background: var(--selected-bg);
+  color: #1e7e34;
+  box-shadow: 0 0 0 2px rgba(39,174,96,0.2);
+}
+.note-btn .sub {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--muted);
+  margin-top: 1px;
+  line-height: 1;
+}
+.note-btn.selected .sub { color: #1e7e34; }
+.note-btn.quarter { border-color: #d4c9a8; }
+.note-btn.quarter.selected { border-color: var(--selected); }
+.note-btn.special { border-color: #c8b8d8; }
+.note-btn.special.selected { border-color: var(--selected); }
+.note-btn.natural { background: #fafaf8; }
+
+#results {
+  padding: 20px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+#results h2 {
+  font-size: 18px;
+  color: var(--primary);
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--accent-light);
+}
+#results-count {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+#results-list { display: flex; flex-direction: column; gap: 10px; }
+.placeholder {
+  color: var(--muted);
+  font-size: 15px;
+  text-align: center;
+  padding: 40px 16px;
+  line-height: 1.6;
+}
+.result-card {
+  padding: 14px 16px;
+  border: 1.5px solid #eee;
+  border-radius: 8px;
+  transition: 0.12s;
+}
+.result-card:hover { border-color: var(--accent); }
+.result-card .family-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--accent-light);
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.result-card .name { font-size: 17px; font-weight: 700; color: var(--primary); }
+.result-card .root { font-size: 13px; color: var(--muted); margin-left: 8px; }
+.result-card .scale {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+.result-card .scale-note {
+  padding: 2px 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.result-card .scale-note.highlight {
+  background: #d4edda;
+  color: #1e7e34;
+}
+
+@media (max-width: 480px) {
+  #app { padding: 12px 8px 32px; }
+  header { padding: 20px 8px 16px; }
+  header h1 { font-size: 22px; }
+  #controls { padding: 12px; flex-direction: column; align-items: stretch; }
+  #root-filter { flex-wrap: wrap; }
+  #note-grid { padding: 12px; gap: 6px; }
+  .note-btn { width: 50px; height: 50px; font-size: 13px; }
+  .note-btn .sub { font-size: 8px; }
+  .result-card { padding: 12px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<header>
+  <h1>Maqam <span>Matcher</span></h1>
+  <p>Select the notes you're playing to find matching Maqams</p>
+</header>
+
+<div id="controls">
+  <div id="root-filter">
+    <label for="root-select">Root:</label>
+    <select id="root-select">
+      <option value="">Any root</option>
+    </select>
+  </div>
+  <div id="selection-area">
+    <span id="selection-text" class="hidden"></span>
+    <div id="selection-notes"></div>
+    <button id="clear-btn" class="hidden">Clear All</button>
+  </div>
+</div>
+
+<section id="note-grid"></section>
+
+<section id="results">
+  <h2>Matching Maqams</h2>
+  <div id="results-list">
+    <p class="placeholder">Select notes to find matching Maqams.</p>
+  </div>
+</section>
+
+</div>
+
+<script>
+const MAQAMS = [
+  {"family":"Ajam","name":"Ajam (C)","root":"C","notes":["C","D","E","F","G","A","B"]},
+  {"family":"Ajam","name":"Ajam (D)","root":"D","notes":["D","E","F#","G","A","B","C#"]},
+  {"family":"Ajam","name":"Ajam (Eb)","root":"Eb","notes":["Eb","F","G","Ab","Bb","C","D"]},
+  {"family":"Ajam","name":"Ajam (F)","root":"F","notes":["F","G","A","Bb","C","D","E"]},
+  {"family":"Ajam","name":"Ajam (G)","root":"G","notes":["G","A","B","C","D","E","F#"]},
+  {"family":"Ajam","name":"Ajam (Bb)","root":"Bb","notes":["Bb","C","D","Eb","F","G","A"]},
+  {"family":"Nahawand","name":"Nahawand (C)","root":"C","notes":["C","D","Eb","F","G","Ab","Bb"]},
+  {"family":"Nahawand","name":"Nahawand (D)","root":"D","notes":["D","E","F","G","A","Bb","C"]},
+  {"family":"Nahawand","name":"Nahawand (E)","root":"E","notes":["E","F#","G","A","B","C","D"]},
+  {"family":"Nahawand","name":"Nahawand (F)","root":"F","notes":["F","G","Ab","Bb","C","Db","Eb"]},
+  {"family":"Nahawand","name":"Nahawand (G)","root":"G","notes":["G","A","Bb","C","D","Eb","F"]},
+  {"family":"Nahawand","name":"Nahawand (A)","root":"A","notes":["A","B","C","D","E","F","G"]},
+  {"family":"Kurd","name":"Kurd (C)","root":"C","notes":["C","Db","Eb","F","G","Ab","Bb"]},
+  {"family":"Kurd","name":"Kurd (D)","root":"D","notes":["D","Eb","F","G","A","Bb","C"]},
+  {"family":"Kurd","name":"Kurd (E)","root":"E","notes":["E","F","G","A","B","C","D"]},
+  {"family":"Kurd","name":"Kurd (G)","root":"G","notes":["G","Ab","Bb","C","D","Eb","F"]},
+  {"family":"Kurd","name":"Kurd (A)","root":"A","notes":["A","Bb","C","D","E","F","G"]},
+  {"family":"Kurd","name":"Kurd (B)","root":"B","notes":["B","C","D","E","F#","G","A"]},
+  {"family":"Rast","name":"Rast (C)","root":"C","notes":["C","D","Ehb","F","G","A","Bhb"]},
+  {"family":"Rast","name":"Rast (F)","root":"F","notes":["F","G","Ahb","Bb","C","D","Ehb"]},
+  {"family":"Rast","name":"Rast (G)","root":"G","notes":["G","A","Bhb","C","D","Ehb","F"]},
+  {"family":"Rast","name":"Rast (D)","root":"D","notes":["D","E","Fhs","G","A","B","Chs"]},
+  {"family":"Rast","name":"Rast (A)","root":"A","notes":["A","B","Chs","D","E","Fhs","G"]},
+  {"family":"Bayati","name":"Bayati (C)","root":"C","notes":["C","Dhb","Eb","F","G","Ab","Bb"]},
+  {"family":"Bayati","name":"Bayati (D)","root":"D","notes":["D","Ehb","F","G","A","Bb","C"]},
+  {"family":"Bayati","name":"Bayati (G)","root":"G","notes":["G","Ahb","Bb","C","D","Eb","F"]},
+  {"family":"Bayati","name":"Bayati (A)","root":"A","notes":["A","Bhb","C","D","E","F","G"]},
+  {"family":"Hijaz","name":"Hijaz (C)","root":"C","notes":["C","Db","E","F","G","Ab","Bb"]},
+  {"family":"Hijaz","name":"Hijaz (D)","root":"D","notes":["D","Eb","F#","G","A","Bb","C"]},
+  {"family":"Hijaz","name":"Hijaz (E)","root":"E","notes":["E","F","G#","A","B","C","D"]},
+  {"family":"Hijaz","name":"Hijaz (G)","root":"G","notes":["G","Ab","B","C","D","Eb","F"]},
+  {"family":"Hijaz","name":"Hijaz (A)","root":"A","notes":["A","Bb","C#","D","E","F","G"]},
+  {"family":"Saba","name":"Saba (C)","root":"C","notes":["C","Dhb","Eb","Fb","G","Ab","Bb"]},
+  {"family":"Saba","name":"Saba (D)","root":"D","notes":["D","Ehb","F","Gb","A","Bb","C"]},
+  {"family":"Saba","name":"Saba (G)","root":"G","notes":["G","Ahb","Bb","Cb","D","Eb","F"]},
+  {"family":"Saba","name":"Saba (A)","root":"A","notes":["A","Bhb","C","Db","E","F","G"]},
+  {"family":"Sikah","name":"Sikah (Ehb)","root":"Ehb","notes":["Ehb","F","G","A","Bhb","C","D"]},
+  {"family":"Sikah","name":"Sikah (Bhb)","root":"Bhb","notes":["Bhb","C","D","Ehb","F","G","A"]},
+  {"family":"Sikah","name":"Sikah (Ahb)","root":"Ahb","notes":["Ahb","Bb","C","Dhb","Eb","F","G"]}
+];
+
+const ALL_NOTES = [
+  { name: 'C', cls: 'natural', sub: '' },
+  { name: 'C#', cls: 'sharp', sub: '♯' },
+  { name: 'Chs', cls: 'quarter', sub: '½♯' },
+  { name: 'Db', cls: 'flat', sub: '♭' },
+  { name: 'D', cls: 'natural', sub: '' },
+  { name: 'Dhb', cls: 'quarter', sub: '½♭' },
+  { name: 'Eb', cls: 'flat', sub: '♭' },
+  { name: 'Ehb', cls: 'quarter', sub: '½♭' },
+  { name: 'E', cls: 'natural', sub: '' },
+  { name: 'Fb', cls: 'special', sub: '♭' },
+  { name: 'F', cls: 'natural', sub: '' },
+  { name: 'F#', cls: 'sharp', sub: '♯' },
+  { name: 'Fhs', cls: 'quarter', sub: '½♯' },
+  { name: 'Gb', cls: 'special', sub: '♭' },
+  { name: 'G', cls: 'natural', sub: '' },
+  { name: 'G#', cls: 'sharp', sub: '♯' },
+  { name: 'Ab', cls: 'flat', sub: '♭' },
+  { name: 'Ahb', cls: 'quarter', sub: '½♭' },
+  { name: 'A', cls: 'natural', sub: '' },
+  { name: 'Bb', cls: 'flat', sub: '♭' },
+  { name: 'Bhb', cls: 'quarter', sub: '½♭' },
+  { name: 'B', cls: 'natural', sub: '' },
+  { name: 'Cb', cls: 'special', sub: '♭' }
+];
+
+const selected = new Set();
+let rootFilter = '';
+
+const noteGrid = document.getElementById('note-grid');
+const resultsList = document.getElementById('results-list');
+const selectionText = document.getElementById('selection-text');
+const selectionNotes = document.getElementById('selection-notes');
+const clearBtn = document.getElementById('clear-btn');
+const rootSelect = document.getElementById('root-select');
+
+function getRoots() {
+  const roots = new Set();
+  MAQAMS.forEach(m => roots.add(m.root));
+  return [...roots].sort((a, b) => ALL_NOTES.findIndex(n => n.name === a) - ALL_NOTES.findIndex(n => n.name === b));
+}
+
+function populateRoots() {
+  getRoots().forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r;
+    opt.textContent = r;
+    rootSelect.appendChild(opt);
+  });
+}
+
+function renderNoteButtons() {
+  ALL_NOTES.forEach(({ name, cls, sub }) => {
+    const btn = document.createElement('button');
+    btn.className = `note-btn ${cls}`;
+    btn.dataset.note = name;
+    btn.innerHTML = `${name}${sub ? `<span class="sub">${sub}</span>` : ''}`;
+    btn.addEventListener('click', () => toggleNote(name));
+    noteGrid.appendChild(btn);
+  });
+}
+
+function toggleNote(note) {
+  if (selected.has(note)) selected.delete(note);
+  else selected.add(note);
+  update();
+}
+
+function clearSelection() {
+  selected.clear();
+  update();
+}
+
+function update() {
+  updateButtons();
+  updateSelectionDisplay();
+  updateClearButton();
+  updateResults();
+}
+
+function updateButtons() {
+  noteGrid.querySelectorAll('.note-btn').forEach(btn => {
+    btn.classList.toggle('selected', selected.has(btn.dataset.note));
+  });
+}
+
+function updateSelectionDisplay() {
+  if (selected.size === 0) {
+    selectionText.textContent = 'No notes selected';
+    selectionNotes.innerHTML = '';
+    return;
+  }
+  selectionText.textContent = 'Selected:';
+  selectionNotes.innerHTML = '';
+  ALL_NOTES.forEach(({ name }) => {
+    if (selected.has(name)) {
+      const span = document.createElement('span');
+      span.className = 'selection-note';
+      span.textContent = name;
+      selectionNotes.appendChild(span);
+    }
+  });
+}
+
+function updateClearButton() {
+  clearBtn.classList.toggle('hidden', selected.size === 0);
+}
+
+function findMatchingMaqams() {
+  if (selected.size === 0) return [];
+
+  let candidates = MAQAMS;
+  if (rootFilter) {
+    candidates = candidates.filter(m => m.root === rootFilter);
+  }
+
+  const selArr = [...selected];
+  return candidates.filter(maqam =>
+    selArr.every(note => maqam.notes.includes(note))
+  );
+}
+
+function updateResults() {
+  const matching = findMatchingMaqams();
+
+  if (selected.size === 0) {
+    resultsList.innerHTML = '<p class="placeholder">Select notes to find matching Maqams.</p>';
+    return;
+  }
+
+  if (matching.length === 0) {
+    resultsList.innerHTML = '<p class="placeholder">No matching Maqams found.<br>Try removing a note.</p>';
+    return;
+  }
+
+  const h = [`<div id="results-count">Found ${matching.length} maqam${matching.length !== 1 ? 's' : ''}</div>`];
+  matching.forEach(m => {
+    h.push(`<div class="result-card">
+      <div class="family-badge">${m.family}</div>
+      <span class="name">${m.name}</span>
+      <span class="root">Root: ${m.root}</span>
+      <div class="scale">${m.notes.map(n =>
+        `<span class="scale-note${selected.has(n) ? ' highlight' : ''}">${n}</span>`
+      ).join('')}</div>
+    </div>`);
+  });
+  resultsList.innerHTML = h.join('');
+}
+
+rootSelect.addEventListener('change', () => {
+  rootFilter = rootSelect.value;
+  updateResults();
+});
+
+clearBtn.addEventListener('click', clearSelection);
+
+populateRoots();
+renderNoteButtons();
+update();
+</script>
+</body>
+</html>

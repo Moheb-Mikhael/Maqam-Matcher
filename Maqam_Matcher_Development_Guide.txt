@@ -1,0 +1,99 @@
+=============================================================================
+          PROJECT REQUIREMENTS & DEVELOPMENT GUIDE
+                Arabic Maqam Reverse Lookup Website
+=============================================================================
+
+1. PROJECT OVERVIEW
+-----------------------------------------------------------------------------
+The goal is to build a web application that acts as a "Maqam Matcher" or 
+reverse lookup tool. Instead of users selecting a Maqam to see its notes, 
+they input the notes they are playing, and the system dynamically filters 
+a database to show them which Maqams match those exact notes.
+
+2. SYSTEM ARCHITECTURE & TECH STACK
+-----------------------------------------------------------------------------
+Since the database is relatively small (around 40-50 scales initially), 
+a fully client-side (Frontend) architecture is highly recommended.
+- Frontend Framework: React.js, Vue.js, or plain HTML/CSS/Vanilla JavaScript.
+- Database: A static JSON file (maqams.json) bundled with the frontend.
+- Hosting: Vercel, Netlify, or GitHub Pages (Free and fast for static apps).
+- Styling: Tailwind CSS or standard CSS for clean, responsive design.
+
+3. CORE FEATURES & USER INTERFACE (UI)
+-----------------------------------------------------------------------------
+A. Note Input Section:
+   - A visual grid of buttons or a customized virtual piano keyboard.
+   - Must include standard Western notes (C, C#, D, Eb, etc.) AND 
+     Arabic quarter-tones (Half-flats like Ehb, Ahb, and Half-sharps).
+   - Users can click notes to toggle them ON or OFF.
+   - Visual feedback (e.g., button turns green when selected).
+
+B. Active Selection Display:
+   - A small section showing the currently selected notes 
+     (e.g., "You selected: F, G, A, Bb").
+   - A "Clear All" button to reset the selection.
+
+C. Results Section:
+   - A dynamic list that updates instantly as the user clicks notes.
+   - Shows the matching Maqam Name, the Root Note, and the Full Scale.
+   - If no notes are selected, show "Select notes to find matching Maqams."
+   - If no Maqams match, show "No matching Maqams found. Try removing a note."
+
+4. THE DATABASE STRUCTURE (JSON)
+-----------------------------------------------------------------------------
+You will use a JSON array of objects. Each object represents a specific 
+transposition of a Maqam.
+Example structure:
+[
+  {
+    "family": "Nahawand",
+    "name": "Nahawand (C)",
+    "root": "C",
+    "notes": ["C", "D", "Eb", "F", "G", "Ab", "Bb"]
+  }
+]
+Note: Ensure notation consistency (e.g., always use "Eb", not sometimes 
+"Eb" and sometimes "D#") so the matching logic doesn't fail.
+
+5. THE MATCHING LOGIC (ALGORITHM)
+-----------------------------------------------------------------------------
+The core logic relies on JavaScript's Array filtering. 
+When the user array `selectedNotes` changes, run this function:
+
+function findMatchingMaqams(selectedNotes, database) {
+    if (selectedNotes.length === 0) return []; // Return empty if nothing selected
+    
+    return database.filter(maqam => {
+        // Check if EVERY note in the user's selection exists in the maqam's scale
+        return selectedNotes.every(note => maqam.notes.includes(note));
+    });
+}
+
+6. STEP-BY-STEP DEVELOPMENT ROADMAP
+-----------------------------------------------------------------------------
+PHASE 1: Project Setup
+- Initialize the project (e.g., `npx create-react-app maqam-matcher` or standard HTML/JS).
+- Create the `maqams.json` file and paste the database array into it.
+
+PHASE 2: Building the UI Elements
+- Create the buttons for all 24 possible notes (12 standard + 12 quarter tones).
+- Add onClick event listeners to these buttons to push/remove notes from a `selectedNotes` array (State management).
+
+PHASE 3: Implementing the Logic
+- Import the JSON data.
+- Write the `findMatchingMaqams` function.
+- Bind the output of this function to the Results UI so it renders a list of matched scales.
+
+PHASE 4: Refinement & User Experience (UX)
+- Add a "Root Note" optional dropdown. If the user knows the root note, they can select it to instantly filter out 80% of the wrong matches.
+- Style the application for mobile devices (many musicians will use it on their phones while practicing).
+
+PHASE 5: Future Enhancements (V2.0)
+- Audio Playback: Use the Web Audio API or pre-recorded samples to let the user hear the Maqam scale when they click on a result.
+- Interval Mode: Instead of fixed notes, allow users to input intervals (e.g., 3/4 tone, 1 tone) to match Maqams regardless of transposition.
+
+7. DEPLOYMENT
+-----------------------------------------------------------------------------
+- Push your code to a GitHub repository.
+- Connect the repository to Vercel or Netlify.
+- Click "Deploy". Your website will be live globally in 2 minutes.
