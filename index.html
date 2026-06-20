@@ -50,12 +50,19 @@ header p { color: var(--muted); font-size: 15px; }
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   margin-bottom: 20px;
   padding: 16px;
   background: var(--surface);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+}
+.controls-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 #root-filter {
   display: flex;
@@ -71,19 +78,72 @@ header p { color: var(--muted); font-size: 15px; }
   background: white;
   cursor: pointer;
 }
+
+/* Toggle Switch Styles */
+.toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 24px;
+}
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 24px;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+input:checked + .slider {
+  background-color: var(--accent);
+}
+input:checked + .slider:before {
+  transform: translateX(22px);
+}
+
 #selection-area {
-  flex: 1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  min-width: 200px;
+  width: 100%;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
 }
 #selection-text { font-size: 14px; color: var(--muted); }
 #selection-notes {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  flex: 1;
 }
 .selection-note {
   display: inline-block;
@@ -229,9 +289,9 @@ header p { color: var(--muted); font-size: 15px; }
   header { padding: 20px 8px 16px; }
   header h1 { font-size: 22px; }
   #controls { padding: 12px; flex-direction: column; align-items: stretch; }
-  #root-filter { flex-wrap: wrap; }
+  .controls-group { justify-content: space-between; width: 100%; }
   #note-grid { padding: 12px; gap: 6px; }
-  .note-btn { width: 50px; height: 50px; font-size: 13px; }
+  .note-btn { width: 50px; height: 50px; font-size: 12px; }
   .note-btn .sub { font-size: 8px; }
   .result-card { padding: 12px; }
 }
@@ -246,12 +306,24 @@ header p { color: var(--muted); font-size: 15px; }
 </header>
 
 <div id="controls">
-  <div id="root-filter">
-    <label for="root-select">Root:</label>
-    <select id="root-select">
-      <option value="">Any root</option>
-    </select>
-  </div>
+    <div class="controls-group">
+      <div id="root-filter">
+        <label for="root-select">Root:</label>
+        <select id="root-select">
+          <option value="">Any root</option>
+        </select>
+      </div>
+      
+      <div class="toggle-container">
+        <span>Do Re Mi</span>
+        <label class="switch">
+          <input type="checkbox" id="notation-toggle">
+          <span class="slider"></span>
+        </label>
+        <span>C D E</span>
+      </div>
+    </div>
+
   <div id="selection-area">
     <span id="selection-text" class="hidden"></span>
     <div id="selection-notes"></div>
@@ -271,76 +343,79 @@ header p { color: var(--muted); font-size: 15px; }
 </div>
 
 <script>
+// Base Data with generic identifiers
 const MAQAMS = [
-  {"family":"Ajam","name":"Ajam (C)","root":"C","notes":["C","D","E","F","G","A","B"]},
-  {"family":"Ajam","name":"Ajam (D)","root":"D","notes":["D","E","F#","G","A","B","C#"]},
-  {"family":"Ajam","name":"Ajam (Eb)","root":"Eb","notes":["Eb","F","G","Ab","Bb","C","D"]},
-  {"family":"Ajam","name":"Ajam (F)","root":"F","notes":["F","G","A","Bb","C","D","E"]},
-  {"family":"Ajam","name":"Ajam (G)","root":"G","notes":["G","A","B","C","D","E","F#"]},
-  {"family":"Ajam","name":"Ajam (Bb)","root":"Bb","notes":["Bb","C","D","Eb","F","G","A"]},
-  {"family":"Nahawand","name":"Nahawand (C)","root":"C","notes":["C","D","Eb","F","G","Ab","Bb"]},
-  {"family":"Nahawand","name":"Nahawand (D)","root":"D","notes":["D","E","F","G","A","Bb","C"]},
-  {"family":"Nahawand","name":"Nahawand (E)","root":"E","notes":["E","F#","G","A","B","C","D"]},
-  {"family":"Nahawand","name":"Nahawand (F)","root":"F","notes":["F","G","Ab","Bb","C","Db","Eb"]},
-  {"family":"Nahawand","name":"Nahawand (G)","root":"G","notes":["G","A","Bb","C","D","Eb","F"]},
-  {"family":"Nahawand","name":"Nahawand (A)","root":"A","notes":["A","B","C","D","E","F","G"]},
-  {"family":"Kurd","name":"Kurd (C)","root":"C","notes":["C","Db","Eb","F","G","Ab","Bb"]},
-  {"family":"Kurd","name":"Kurd (D)","root":"D","notes":["D","Eb","F","G","A","Bb","C"]},
-  {"family":"Kurd","name":"Kurd (E)","root":"E","notes":["E","F","G","A","B","C","D"]},
-  {"family":"Kurd","name":"Kurd (G)","root":"G","notes":["G","Ab","Bb","C","D","Eb","F"]},
-  {"family":"Kurd","name":"Kurd (A)","root":"A","notes":["A","Bb","C","D","E","F","G"]},
-  {"family":"Kurd","name":"Kurd (B)","root":"B","notes":["B","C","D","E","F#","G","A"]},
-  {"family":"Rast","name":"Rast (C)","root":"C","notes":["C","D","Ehb","F","G","A","Bhb"]},
-  {"family":"Rast","name":"Rast (F)","root":"F","notes":["F","G","Ahb","Bb","C","D","Ehb"]},
-  {"family":"Rast","name":"Rast (G)","root":"G","notes":["G","A","Bhb","C","D","Ehb","F"]},
-  {"family":"Rast","name":"Rast (D)","root":"D","notes":["D","E","Fhs","G","A","B","Chs"]},
-  {"family":"Rast","name":"Rast (A)","root":"A","notes":["A","B","Chs","D","E","Fhs","G"]},
-  {"family":"Bayati","name":"Bayati (C)","root":"C","notes":["C","Dhb","Eb","F","G","Ab","Bb"]},
-  {"family":"Bayati","name":"Bayati (D)","root":"D","notes":["D","Ehb","F","G","A","Bb","C"]},
-  {"family":"Bayati","name":"Bayati (G)","root":"G","notes":["G","Ahb","Bb","C","D","Eb","F"]},
-  {"family":"Bayati","name":"Bayati (A)","root":"A","notes":["A","Bhb","C","D","E","F","G"]},
-  {"family":"Hijaz","name":"Hijaz (C)","root":"C","notes":["C","Db","E","F","G","Ab","Bb"]},
-  {"family":"Hijaz","name":"Hijaz (D)","root":"D","notes":["D","Eb","F#","G","A","Bb","C"]},
-  {"family":"Hijaz","name":"Hijaz (E)","root":"E","notes":["E","F","G#","A","B","C","D"]},
-  {"family":"Hijaz","name":"Hijaz (G)","root":"G","notes":["G","Ab","B","C","D","Eb","F"]},
-  {"family":"Hijaz","name":"Hijaz (A)","root":"A","notes":["A","Bb","C#","D","E","F","G"]},
-  {"family":"Saba","name":"Saba (C)","root":"C","notes":["C","Dhb","Eb","Fb","G","Ab","Bb"]},
-  {"family":"Saba","name":"Saba (D)","root":"D","notes":["D","Ehb","F","Gb","A","Bb","C"]},
-  {"family":"Saba","name":"Saba (G)","root":"G","notes":["G","Ahb","Bb","Cb","D","Eb","F"]},
-  {"family":"Saba","name":"Saba (A)","root":"A","notes":["A","Bhb","C","Db","E","F","G"]},
-  {"family":"Sikah","name":"Sikah (Ehb)","root":"Ehb","notes":["Ehb","F","G","A","Bhb","C","D"]},
-  {"family":"Sikah","name":"Sikah (Bhb)","root":"Bhb","notes":["Bhb","C","D","Ehb","F","G","A"]},
-  {"family":"Sikah","name":"Sikah (Ahb)","root":"Ahb","notes":["Ahb","Bb","C","Dhb","Eb","F","G"]}
+  {"family":"Ajam","name":"Ajam (Do)","root":"C","notes":["C","D","E","F","G","A","B"]},
+  {"family":"Ajam","name":"Ajam (Re)","root":"D","notes":["D","E","F#","G","A","B","C#"]},
+  {"family":"Ajam","name":"Ajam (Mi♭)","root":"Eb","notes":["Eb","F","G","Ab","Bb","C","D"]},
+  {"family":"Ajam","name":"Ajam (Fa)","root":"F","notes":["F","G","A","Bb","C","D","E"]},
+  {"family":"Ajam","name":"Ajam (Sol)","root":"G","notes":["G","A","B","C","D","E","F#"]},
+  {"family":"Ajam","name":"Ajam (Si♭)","root":"Bb","notes":["Bb","C","D","Eb","F","G","A"]},
+  {"family":"Nahawand","name":"Nahawand (Do)","root":"C","notes":["C","D","Eb","F","G","Ab","Bb"]},
+  {"family":"Nahawand","name":"Nahawand (Re)","root":"D","notes":["D","E","F","G","A","Bb","C"]},
+  {"family":"Nahawand","name":"Nahawand (Mi)","root":"E","notes":["E","F#","G","A","B","C","D"]},
+  {"family":"Nahawand","name":"Nahawand (Fa)","root":"F","notes":["F","G","Ab","Bb","C","Db","Eb"]},
+  {"family":"Nahawand","name":"Nahawand (Sol)","root":"G","notes":["G","A","Bb","C","D","Eb","F"]},
+  {"family":"Nahawand","name":"Nahawand (La)","root":"A","notes":["A","B","C","D","E","F","G"]},
+  {"family":"Kurd","name":"Kurd (Do)","root":"C","notes":["C","Db","Eb","F","G","Ab","Bb"]},
+  {"family":"Kurd","name":"Kurd (Re)","root":"D","notes":["D","Eb","F","G","A","Bb","C"]},
+  {"family":"Kurd","name":"Kurd (Mi)","root":"E","notes":["E","F","G","A","B","C","D"]},
+  {"family":"Kurd","name":"Kurd (Sol)","root":"G","notes":["G","Ab","Bb","C","D","Eb","F"]},
+  {"family":"Kurd","name":"Kurd (La)","root":"A","notes":["A","Bb","C","D","E","F","G"]},
+  {"family":"Kurd","name":"Kurd (Si)","root":"B","notes":["B","C","D","E","F#","G","A"]},
+  {"family":"Rast","name":"Rast (Do)","root":"C","notes":["C","D","Ehb","F","G","A","Bhb"]},
+  {"family":"Rast","name":"Rast (Fa)","root":"F","notes":["F","G","Ahb","Bb","C","D","Ehb"]},
+  {"family":"Rast","name":"Rast (Sol)","root":"G","notes":["G","A","Bhb","C","D","Ehb","F"]},
+  {"family":"Rast","name":"Rast (Re)","root":"D","notes":["D","E","Fhs","G","A","B","Chs"]},
+  {"family":"Rast","name":"Rast (La)","root":"A","notes":["A","B","Chs","D","E","Fhs","G"]},
+  {"family":"Bayati","name":"Bayati (Do)","root":"C","notes":["C","Dhb","Eb","F","G","Ab","Bb"]},
+  {"family":"Bayati","name":"Bayati (Re)","root":"D","notes":["D","Ehb","F","G","A","Bb","C"]},
+  {"family":"Bayati","name":"Bayati (Sol)","root":"G","notes":["G","Ahb","Bb","C","D","Eb","F"]},
+  {"family":"Bayati","name":"Bayati (La)","root":"A","notes":["A","Bhb","C","D","E","F","G"]},
+  {"family":"Hijaz","name":"Hijaz (Do)","root":"C","notes":["C","Db","E","F","G","Ab","Bb"]},
+  {"family":"Hijaz","name":"Hijaz (Re)","root":"D","notes":["D","Eb","F#","G","A","Bb","C"]},
+  {"family":"Hijaz","name":"Hijaz (Mi)","root":"E","notes":["E","F","G#","A","B","C","D"]},
+  {"family":"Hijaz","name":"Hijaz (Sol)","root":"G","notes":["G","Ab","B","C","D","Eb","F"]},
+  {"family":"Hijaz","name":"Hijaz (La)","root":"A","notes":["A","Bb","C#","D","E","F","G"]},
+  {"family":"Saba","name":"Saba (Do)","root":"C","notes":["C","Dhb","Eb","Fb","G","Ab","Bb"]},
+  {"family":"Saba","name":"Saba (Re)","root":"D","notes":["D","Ehb","F","Gb","A","Bb","C"]},
+  {"family":"Saba","name":"Saba (Sol)","root":"G","notes":["G","Ahb","Bb","Cb","D","Eb","F"]},
+  {"family":"Saba","name":"Saba (La)","root":"A","notes":["A","Bhb","C","Db","E","F","G"]},
+  {"family":"Sikah","name":"Sikah (Mi½♭)","root":"Ehb","notes":["Ehb","F","G","A","Bhb","C","D"]},
+  {"family":"Sikah","name":"Sikah (Si½♭)","root":"Bhb","notes":["Bhb","C","D","Ehb","F","G","A"]},
+  {"family":"Sikah","name":"Sikah (La½♭)","root":"Ahb","notes":["Ahb","Bb","C","Dhb","Eb","F","G"]}
 ];
 
+// Mapping structure to handle both notations
 const ALL_NOTES = [
-  { name: 'C', cls: 'natural', sub: '' },
-  { name: 'C#', cls: 'sharp', sub: '♯' },
-  { name: 'Chs', cls: 'quarter', sub: '½♯' },
-  { name: 'Db', cls: 'flat', sub: '♭' },
-  { name: 'D', cls: 'natural', sub: '' },
-  { name: 'Dhb', cls: 'quarter', sub: '½♭' },
-  { name: 'Eb', cls: 'flat', sub: '♭' },
-  { name: 'Ehb', cls: 'quarter', sub: '½♭' },
-  { name: 'E', cls: 'natural', sub: '' },
-  { name: 'Fb', cls: 'special', sub: '♭' },
-  { name: 'F', cls: 'natural', sub: '' },
-  { name: 'F#', cls: 'sharp', sub: '♯' },
-  { name: 'Fhs', cls: 'quarter', sub: '½♯' },
-  { name: 'Gb', cls: 'special', sub: '♭' },
-  { name: 'G', cls: 'natural', sub: '' },
-  { name: 'G#', cls: 'sharp', sub: '♯' },
-  { name: 'Ab', cls: 'flat', sub: '♭' },
-  { name: 'Ahb', cls: 'quarter', sub: '½♭' },
-  { name: 'A', cls: 'natural', sub: '' },
-  { name: 'Bb', cls: 'flat', sub: '♭' },
-  { name: 'Bhb', cls: 'quarter', sub: '½♭' },
-  { name: 'B', cls: 'natural', sub: '' },
-  { name: 'Cb', cls: 'special', sub: '♭' }
+  { id: 'C',   cls: 'natural', sub: '',    solfege: 'Do',  western: 'C' },
+  { id: 'C#',  cls: 'sharp',   sub: '♯',   solfege: 'Do',  western: 'C' },
+  { id: 'Chs', cls: 'quarter', sub: '½♯',  solfege: 'Do',  western: 'C' },
+  { id: 'Db',  cls: 'flat',    sub: '♭',   solfege: 'Re',  western: 'D' },
+  { id: 'D',   cls: 'natural', sub: '',    solfege: 'Re',  western: 'D' },
+  { id: 'Dhb', cls: 'quarter', sub: '½♭',  solfege: 'Re',  western: 'D' },
+  { id: 'Eb',  cls: 'flat',    sub: '♭',   solfege: 'Mi',  western: 'E' },
+  { id: 'Ehb', cls: 'quarter', sub: '½♭',  solfege: 'Mi',  western: 'E' },
+  { id: 'E',   cls: 'natural', sub: '',    solfege: 'Mi',  western: 'E' },
+  { id: 'Fb',  cls: 'special', sub: '♭',   solfege: 'Fa',  western: 'F' },
+  { id: 'F',   cls: 'natural', sub: '',    solfege: 'Fa',  western: 'F' },
+  { id: 'F#',  cls: 'sharp',   sub: '♯',   solfege: 'Fa',  western: 'F' },
+  { id: 'Fhs', cls: 'quarter', sub: '½♯',  solfege: 'Fa',  western: 'F' },
+  { id: 'Gb',  cls: 'special', sub: '♭',   solfege: 'Sol', western: 'G' },
+  { id: 'G',   cls: 'natural', sub: '',    solfege: 'Sol', western: 'G' },
+  { id: 'G#',  cls: 'sharp',   sub: '♯',   solfege: 'Sol', western: 'G' },
+  { id: 'Ab',  cls: 'flat',    sub: '♭',   solfege: 'La',  western: 'A' },
+  { id: 'Ahb', cls: 'quarter', sub: '½♭',  solfege: 'La',  western: 'A' },
+  { id: 'A',   cls: 'natural', sub: '',    solfege: 'La',  western: 'A' },
+  { id: 'Bb',  cls: 'flat',    sub: '♭',   solfege: 'Si',  western: 'B' },
+  { id: 'Bhb', cls: 'quarter', sub: '½♭',  solfege: 'Si',  western: 'B' },
+  { id: 'B',   cls: 'natural', sub: '',    solfege: 'Si',  western: 'B' },
+  { id: 'Cb',  cls: 'special', sub: '♭',   solfege: 'Do',  western: 'C' }
 ];
 
 const selected = new Set();
 let rootFilter = '';
+let useWestern = false; // Default is Do Re Mi
 
 const noteGrid = document.getElementById('note-grid');
 const resultsList = document.getElementById('results-list');
@@ -348,36 +423,74 @@ const selectionText = document.getElementById('selection-text');
 const selectionNotes = document.getElementById('selection-notes');
 const clearBtn = document.getElementById('clear-btn');
 const rootSelect = document.getElementById('root-select');
+const notationToggle = document.getElementById('notation-toggle');
+
+// Helper to get correct display name based on current notation
+function getDisplayName(noteId) {
+    const noteObj = ALL_NOTES.find(n => n.id === noteId);
+    if (!noteObj) return noteId;
+    return useWestern ? noteObj.western : noteObj.solfege;
+}
+
+// Helper to update Maqam names based on notation
+function formatMaqamName(maqam) {
+    if(!useWestern) return maqam.name;
+    
+    // Replace solfege with western in the name string if toggle is on
+    let newName = maqam.name;
+    newName = newName.replace('(Do)', '(C)')
+                     .replace('(Re)', '(D)')
+                     .replace('(Mi)', '(E)')
+                     .replace('(Fa)', '(F)')
+                     .replace('(Sol)', '(G)')
+                     .replace('(La)', '(A)')
+                     .replace('(Si)', '(B)')
+                     .replace('(Mi♭)', '(Eb)')
+                     .replace('(Si♭)', '(Bb)')
+                     .replace('(Mi½♭)', '(Ehb)')
+                     .replace('(Si½♭)', '(Bhb)')
+                     .replace('(La½♭)', '(Ahb)');
+    return newName;
+}
+
 
 function getRoots() {
   const roots = new Set();
   MAQAMS.forEach(m => roots.add(m.root));
-  return [...roots].sort((a, b) => ALL_NOTES.findIndex(n => n.name === a) - ALL_NOTES.findIndex(n => n.name === b));
+  return [...roots].sort((a, b) => ALL_NOTES.findIndex(n => n.id === a) - ALL_NOTES.findIndex(n => n.id === b));
 }
 
 function populateRoots() {
+  rootSelect.innerHTML = '<option value="">Any root</option>';
   getRoots().forEach(r => {
     const opt = document.createElement('option');
     opt.value = r;
-    opt.textContent = r;
+    opt.textContent = getDisplayName(r) + (ALL_NOTES.find(n=>n.id===r)?.sub || '');
     rootSelect.appendChild(opt);
   });
+  rootSelect.value = rootFilter; // Maintain selection
 }
 
 function renderNoteButtons() {
-  ALL_NOTES.forEach(({ name, cls, sub }) => {
+  noteGrid.innerHTML = '';
+  ALL_NOTES.forEach(({ id, cls, sub }) => {
     const btn = document.createElement('button');
     btn.className = `note-btn ${cls}`;
-    btn.dataset.note = name;
-    btn.innerHTML = `${name}${sub ? `<span class="sub">${sub}</span>` : ''}`;
-    btn.addEventListener('click', () => toggleNote(name));
+    btn.dataset.note = id;
+    
+    const displayName = getDisplayName(id);
+    btn.innerHTML = `${displayName}${sub ? `<span class="sub">${sub}</span>` : ''}`;
+    
+    if(selected.has(id)) btn.classList.add('selected');
+    
+    btn.addEventListener('click', () => toggleNote(id));
     noteGrid.appendChild(btn);
   });
 }
 
-function toggleNote(note) {
-  if (selected.has(note)) selected.delete(note);
-  else selected.add(note);
+function toggleNote(noteId) {
+  if (selected.has(noteId)) selected.delete(noteId);
+  else selected.add(noteId);
   update();
 }
 
@@ -407,11 +520,11 @@ function updateSelectionDisplay() {
   }
   selectionText.textContent = 'Selected:';
   selectionNotes.innerHTML = '';
-  ALL_NOTES.forEach(({ name }) => {
-    if (selected.has(name)) {
+  ALL_NOTES.forEach(({ id, sub }) => {
+    if (selected.has(id)) {
       const span = document.createElement('span');
       span.className = 'selection-note';
-      span.textContent = name;
+      span.textContent = getDisplayName(id) + sub;
       selectionNotes.appendChild(span);
     }
   });
@@ -450,17 +563,31 @@ function updateResults() {
 
   const h = [`<div id="results-count">Found ${matching.length} maqam${matching.length !== 1 ? 's' : ''}</div>`];
   matching.forEach(m => {
+    
+    const rootSub = ALL_NOTES.find(n => n.id === m.root)?.sub || '';
+    
     h.push(`<div class="result-card">
       <div class="family-badge">${m.family}</div>
-      <span class="name">${m.name}</span>
-      <span class="root">Root: ${m.root}</span>
-      <div class="scale">${m.notes.map(n =>
-        `<span class="scale-note${selected.has(n) ? ' highlight' : ''}">${n}</span>`
-      ).join('')}</div>
+      <span class="name">${formatMaqamName(m)}</span>
+      <span class="root">Root: ${getDisplayName(m.root)}${rootSub}</span>
+      <div class="scale">${m.notes.map(n => {
+        const noteObj = ALL_NOTES.find(x => x.id === n);
+        const sub = noteObj?.sub || '';
+        const name = getDisplayName(n);
+        return `<span class="scale-note${selected.has(n) ? ' highlight' : ''}">${name}${sub}</span>`
+      }).join('')}</div>
     </div>`);
   });
   resultsList.innerHTML = h.join('');
 }
+
+// Toggle Notation Listener
+notationToggle.addEventListener('change', (e) => {
+    useWestern = e.target.checked;
+    renderNoteButtons();
+    populateRoots();
+    update();
+});
 
 rootSelect.addEventListener('change', () => {
   rootFilter = rootSelect.value;
@@ -469,6 +596,7 @@ rootSelect.addEventListener('change', () => {
 
 clearBtn.addEventListener('click', clearSelection);
 
+// Initial setup
 populateRoots();
 renderNoteButtons();
 update();
